@@ -1,11 +1,12 @@
 import os
+import json
 import requests
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Shihab King AI - 6 Engine Live Core")
+app = FastAPI(title="Shihab King AI - Universal Resilient Core")
 
-# ফোন বা যেকোনো লোকাল সোর্স থেকে কল আসার পূর্ণাঙ্গ অনুমতি (CORS Fix)
+# সমস্ত অরিজিন ও লোকাল ফাইল পারমিশন
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,7 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ফোনের রিকোয়েস্টের জন্য প্রি-ফ্লাইট পারমিশন হ্যান্ডলার
 @app.options("/{full_path:path}")
 async def options_handler(full_path: str):
     return Response(
@@ -27,156 +27,143 @@ async def options_handler(full_path: str):
     )
 
 @app.get("/")
-def root():
+def health():
     return {
         "status": "Online",
-        "engine": "Shihab King AI 6-Engine Cluster",
-        "credits": "Unlimited",
-        "engines_active": {
-            "1_code_architect": "Qwen-2.5-Coder-72B / DeepSeek-V3",
-            "2_auto_debugger": "Llama-3.3-70B-Instruct",
-            "3_gemini_fallback": "Mistral-Large-2411",
-            "4_kling_video": "Pollinations-Video-Gen",
-            "5_runway_video": "HunyuanVideo-Direct",
-            "6_voice_tts": "TTS-Edge-Synthesizer"
-        }
+        "engine": "Shihab King AI Resilient Core",
+        "credits": "Unlimited"
     }
 
-# 1. Claude Architect (লজিক, গেম ডেভেলপমেন্ট ও কোডিং)
+# ১. আর্কিটেক্ট ইঞ্জিন (Stage 1/5 - Claude / Anthropic এর সব ভ্যারিয়েন্ট হ্যান্ডলার)
 @app.post("/v1/messages")
+@app.post("/messages")
 @app.post("/v1/architect")
-async def claude_architect(request: Request):
-    data = await request.json()
-    messages = data.get("messages", [])
-    prompt = messages[-1].get("content", "Generate architecture") if messages else "Generate architecture"
-    
+async def claude_resilient(request: Request):
+    prompt_text = "Create the game architecture"
     try:
-        url = f"https://text.pollinations.ai/{prompt}?model=qwen-coder"
-        res = requests.get(url, timeout=60)
-        output_text = res.text
+        body = await request.json()
+        if "messages" in body and isinstance(body["messages"], list):
+            for m in reversed(body["messages"]):
+                content = m.get("content", "")
+                if isinstance(content, str) and content.strip():
+                    prompt_text = content
+                    break
+                elif isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            prompt_text = item.get("text", prompt_text)
+                            break
+        elif "prompt" in body:
+            prompt_text = str(body["prompt"])
     except Exception:
-        output_text = f"Architect Logic Engine Processed: {prompt}"
+        pass
 
+    try:
+        # হাই-স্পিড কোডার ব্যাকএন্ড কল
+        url = f"https://text.pollinations.ai/{requests.utils.quote(prompt_text)}?model=qwen-coder"
+        res = requests.get(url, timeout=40)
+        output = res.text if res.status_code == 200 else f"Architecture for: {prompt_text}"
+    except Exception:
+        output = f"// Shihab King Engine Generated Game Blueprint for: {prompt_text}\nconst Game = {{ title: '{prompt_text}', status: 'Active' }};"
+
+    # Anthropic Claude Standard Response Format
     return {
-        "content": [{"type": "text", "text": output_text}],
-        "role": "assistant"
+        "id": "msg_shihab_king_core",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-3-5-sonnet-20241022",
+        "content": [
+            {
+                "type": "text",
+                "text": output
+            }
+        ],
+        "stop_reason": "end_turn",
+        "stop_sequence": None,
+        "usage": {"input_tokens": 100, "output_tokens": 500}
     }
 
-# 2. OpenAI Debugger & Optimizer (ত্রুটি সমাধান ও অপটিমাইজেশন)
+# ২. চ্যাট ও ডিবাগার ইঞ্জিন (OpenAI Chat Completions)
 @app.post("/v1/chat/completions")
-async def openai_debugger(request: Request):
-    data = await request.json()
-    messages = data.get("messages", [])
-    prompt = messages[-1].get("content", "Debug code") if messages else "Optimize"
+@app.post("/chat/completions")
+async def openai_resilient(request: Request):
+    user_query = "Optimize project"
+    try:
+        body = await request.json()
+        messages = body.get("messages", [])
+        if messages:
+            user_query = messages[-1].get("content", user_query)
+    except Exception:
+        pass
 
     try:
-        url = f"https://text.pollinations.ai/{prompt}?model=deepseek"
-        res = requests.get(url, timeout=60)
-        reply = res.text
+        url = f"https://text.pollinations.ai/{requests.utils.quote(str(user_query))}?model=deepseek"
+        res = requests.get(url, timeout=40)
+        reply = res.text if res.status_code == 200 else f"Processed: {user_query}"
     except Exception:
-        reply = f"Debugger Optimization Output: {prompt}"
+        reply = f"Shihab Core Response: {user_query}"
 
     return {
+        "id": "chatcmpl-shihab",
+        "object": "chat.completion",
         "choices": [{
+            "index": 0,
             "message": {
                 "role": "assistant",
                 "content": reply
-            }
+            },
+            "finish_reason": "stop"
         }]
     }
 
-# 3. Google Gemini Core (ফলব্যাক ও সাধারণ টেক্সট)
+# ৩. জেমিনি ফলব্যাক ইঞ্জিন
 @app.post("/v1beta/models/{model}:generateContent")
-async def gemini_fallback(model: str, request: Request):
-    data = await request.json()
+async def gemini_resilient(model: str, request: Request):
+    text_out = "Gemini Core Output"
     try:
-        prompt = data["contents"][0]["parts"][0]["text"]
-        url = f"https://text.pollinations.ai/{prompt}?model=mistral"
-        res = requests.get(url, timeout=60)
-        reply = res.text
+        data = await request.json()
+        text_out = data["contents"][0]["parts"][0]["text"]
+        url = f"https://text.pollinations.ai/{requests.utils.quote(text_out)}?model=mistral"
+        res = requests.get(url, timeout=40)
+        text_out = res.text if res.status_code == 200 else text_out
     except Exception:
-        reply = "Fallback response generated."
+        pass
 
     return {
         "candidates": [{
             "content": {
-                "parts": [{"text": reply}]
-            }
+                "parts": [{"text": text_out}],
+                "role": "model"
+            },
+            "finishReason": "STOP"
         }]
     }
 
-# 4 & 5. Kling ও Runway Video Generator
+# ৪. ভিডিও ইঞ্জিন
 @app.post("/v1/videos/text2video")
 @app.post("/kling/generate")
 @app.post("/v1/runway/generate")
-@app.post("/v1/video")
-async def video_generator(request: Request):
-    data = await request.json()
-    prompt = data.get("prompt", "cinematic unreal engine 5 render")
-    
-    encoded_prompt = requests.utils.quote(prompt)
-    generated_video = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&nologo=true"
+async def video_resilient(request: Request):
+    prompt = "action game cinematic"
+    try:
+        body = await request.json()
+        prompt = body.get("prompt", prompt)
+    except Exception:
+        pass
 
-    return {
-        "status": "success",
-        "video_url": generated_video,
-        "engine": "Kling/Runway Cinema Engine"
-    }
+    vid_url = f"https://image.pollinations.ai/prompt/{requests.utils.quote(prompt)}?width=1280&height=720&nologo=true"
+    return {"status": "success", "video_url": vid_url, "url": vid_url}
 
-# 6. ElevenLabs Voice / TTS
+# ৫. ভয়েস ও অডিও ইঞ্জিন
 @app.post("/v1/text-to-speech/{voice_id}")
 @app.post("/v1/tts")
-async def voice_tts(voice_id: str = "default", request: Request = None):
-    text = "Audio generation initialized"
+async def audio_resilient(voice_id: str = "default", request: Request = None):
+    text = "Audio synthesized"
     if request:
         try:
-            body = await request.json()
-            text = body.get("text", text)
+            b = await request.json()
+            text = b.get("text", text)
         except Exception:
             pass
-            
-    encoded_text = requests.utils.quote(text)
-    audio_link = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={encoded_text}"
-
-    return {
-        "status": "success",
-        "audio_url": audio_link,
-        "engine": "ElevenLabs-F5-Audio"
-    }
-
-# 7. অটো-এপিকে বিল্ডার ও অ্যান্ড্রয়েড ইনস্টলার
-@app.post("/v1/build-apk")
-@app.post("/v1/install")
-async def auto_apk_compiler_and_installer(request: Request):
-    data = await request.json()
-    app_name = data.get("app_name", "Shihab-King-App")
-    
-    apk_package_url = f"https://shihab-king-ai.onrender.com/download/{app_name}.apk"
-
-    install_trigger_code = f"""
-    <div id="shihab-auto-installer" style="position:fixed;bottom:15px;left:5%;width:90%;background:#0a0f1d;border:2px solid #22c55e;border-radius:12px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,0.8);z-index:999999;text-align:center;font-family:sans-serif;">
-        <p style="color:#ffffff;font-size:15px;margin:0 0 10px 0;font-weight:bold;">🚀 অ্যাপ ও গেম তৈরি সম্পন্ন! APK তৈরি হয়েছে।</p>
-        <button id="direct-install-btn" style="background:#22c55e;color:#000000;font-size:16px;font-weight:900;padding:12px 28px;border:none;border-radius:8px;cursor:pointer;width:100%;text-transform:uppercase;">
-            INSTALL APP
-        </button>
-    </div>
-    <script>
-        document.getElementById('direct-install-btn').addEventListener('click', function() {{
-            const apkUrl = "{apk_package_url}";
-            const intentUri = "intent://" + apkUrl.replace(/^https?:\/\//, '') + "#Intent;scheme=https;type=application/vnd.android.package-archive;end";
-            window.location.href = apkUrl;
-            setTimeout(() => {{
-                window.location.href = intentUri;
-            }}, 500);
-        }});
-    </script>
-    """
-
-    return {
-        "status": "ready",
-        "phase": "apk_build_completed",
-        "apk_url": apk_package_url,
-        "installer_ui": install_trigger_code,
-        "mime_type": "application/vnd.android.package-archive",
-        "direct_install": True
-    }
+    audio_url = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={requests.utils.quote(text)}"
+    return {"status": "success", "audio_url": audio_url}
