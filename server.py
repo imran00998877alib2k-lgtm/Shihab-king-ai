@@ -1,12 +1,11 @@
 import os
 import requests
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, Any, List
 
 app = FastAPI(title="Shihab King AI - 6 Engine Live Core")
 
+# ফোন বা যেকোনো লোকাল সোর্স থেকে কল আসার পূর্ণাঙ্গ অনুমতি (CORS Fix)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,6 +13,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ফোনের রিকোয়েস্টের জন্য প্রি-ফ্লাইট পারমিশন হ্যান্ডলার
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 @app.get("/")
 def root():
@@ -39,12 +50,11 @@ async def claude_architect(request: Request):
     messages = data.get("messages", [])
     prompt = messages[-1].get("content", "Generate architecture") if messages else "Generate architecture"
     
-    # Pollinations AI এর আনলিমিটেড কোডার ইঞ্জিন দিয়ে জেনারেট
     try:
         url = f"https://text.pollinations.ai/{prompt}?model=qwen-coder"
         res = requests.get(url, timeout=60)
         output_text = res.text
-    except Exception as e:
+    except Exception:
         output_text = f"Architect Logic Engine Processed: {prompt}"
 
     return {
@@ -63,7 +73,7 @@ async def openai_debugger(request: Request):
         url = f"https://text.pollinations.ai/{prompt}?model=deepseek"
         res = requests.get(url, timeout=60)
         reply = res.text
-    except Exception as e:
+    except Exception:
         reply = f"Debugger Optimization Output: {prompt}"
 
     return {
@@ -95,7 +105,7 @@ async def gemini_fallback(model: str, request: Request):
         }]
     }
 
-# 4 & 5. Kling ও Runway Video Generator (ভিডিও মেকিং ইঞ্জিন)
+# 4 & 5. Kling ও Runway Video Generator
 @app.post("/v1/videos/text2video")
 @app.post("/kling/generate")
 @app.post("/v1/runway/generate")
@@ -104,7 +114,6 @@ async def video_generator(request: Request):
     data = await request.json()
     prompt = data.get("prompt", "cinematic unreal engine 5 render")
     
-    # আনলিমিটেড ভিডিও ফ্রেম তৈরি
     encoded_prompt = requests.utils.quote(prompt)
     generated_video = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1280&height=720&nologo=true"
 
@@ -114,7 +123,7 @@ async def video_generator(request: Request):
         "engine": "Kling/Runway Cinema Engine"
     }
 
-# 6. ElevenLabs Voice / TTS (ভয়েস সিন্থেসিস ইঞ্জিন)
+# 6. ElevenLabs Voice / TTS
 @app.post("/v1/text-to-speech/{voice_id}")
 @app.post("/v1/tts")
 async def voice_tts(voice_id: str = "default", request: Request = None):
@@ -127,7 +136,6 @@ async def voice_tts(voice_id: str = "default", request: Request = None):
             pass
             
     encoded_text = requests.utils.quote(text)
-    # ফ্রি গুগল অডিও ইঞ্জিন লিংক
     audio_link = f"https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q={encoded_text}"
 
     return {
@@ -136,26 +144,15 @@ async def voice_tts(voice_id: str = "default", request: Request = None):
         "engine": "ElevenLabs-F5-Audio"
     }
 
-
-# ==============================================================================
-# ৭. অটোমেটিক ব্যাকগ্রাউন্ড APK কম্পাইলার ও ডিরেক্ট অ্যান্ড্রয়েড ইনস্টলার মডিউল
-# ==============================================================================
-
+# 7. অটো-এপিকে বিল্ডার ও অ্যান্ড্রয়েড ইনস্টলার
 @app.post("/v1/build-apk")
 @app.post("/v1/install")
 async def auto_apk_compiler_and_installer(request: Request):
-    """
-    অ্যাপ তৈরি সম্পন্ন হওয়ার সাথে সাথে ব্যাকগ্রাউন্ডে স্বয়ংক্রিয়ভাবে 
-    অ্যান্ড্রয়েড APK বিল্ড করবে এবং স্ক্রিনে ইনস্টল ট্রিগার পাঠাবে।
-    """
     data = await request.json()
     app_name = data.get("app_name", "Shihab-King-App")
-    source_code = data.get("code", "")
-
-    # এপিকে সাইনিং ও রেডিমেড অ্যান্ড্রয়েড ইনস্টলেশন লিঙ্ক জেনারেশন
+    
     apk_package_url = f"https://shihab-king-ai.onrender.com/download/{app_name}.apk"
 
-    # ফোনে সরাসরি সিস্টেম পারমিশন পপআপ ও এক-ক্লিকে ইনস্টল এক্সিকিউশন
     install_trigger_code = f"""
     <div id="shihab-auto-installer" style="position:fixed;bottom:15px;left:5%;width:90%;background:#0a0f1d;border:2px solid #22c55e;border-radius:12px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,0.8);z-index:999999;text-align:center;font-family:sans-serif;">
         <p style="color:#ffffff;font-size:15px;margin:0 0 10px 0;font-weight:bold;">🚀 অ্যাপ ও গেম তৈরি সম্পন্ন! APK তৈরি হয়েছে।</p>
@@ -165,11 +162,8 @@ async def auto_apk_compiler_and_installer(request: Request):
     </div>
     <script>
         document.getElementById('direct-install-btn').addEventListener('click', function() {{
-            // অ্যান্ড্রয়েড সিস্টেম প্যাকেজ পারমিশন ও সরাসরি ইনস্টলেশন ট্রিগার
             const apkUrl = "{apk_package_url}";
             const intentUri = "intent://" + apkUrl.replace(/^https?:\/\//, '') + "#Intent;scheme=https;type=application/vnd.android.package-archive;end";
-            
-            // সরাসরি প্যাকেজ ইনস্টলার ওপেন
             window.location.href = apkUrl;
             setTimeout(() => {{
                 window.location.href = intentUri;
